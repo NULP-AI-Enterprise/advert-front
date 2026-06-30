@@ -5,7 +5,17 @@ import { useChatStore } from '@/store/chatStore'
 import { WebSocketMessage } from '@/types/chat'
 import { RecommendationResponse } from '@/types/recommendation'
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? 'http://localhost:8080/api/ws/chat'
+function getWsUrl(): string {
+  if (typeof window === 'undefined') return 'http://localhost:8080/api/ws/chat'
+  const { protocol, hostname } = window.location
+  const proto = protocol === 'https:' ? 'https' : 'http'
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://localhost:8080/api/ws/chat'
+  }
+  // prod: advert.thesis-i.com → advert-back.thesis-i.com
+  const backendHost = hostname.replace(/^[^.]+\./, 'advert-back.')
+  return `${proto}://${backendHost}/api/ws/chat`
+}
 
 export function useWebSocket() {
   const socketRef    = useRef<any>(null)
@@ -57,7 +67,7 @@ export function useWebSocket() {
 
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const SockJS = require('sockjs-client')
-    const sock = new SockJS(WS_URL)
+    const sock = new SockJS(getWsUrl())
     socketRef.current = sock
 
     sock.onopen = () => {
