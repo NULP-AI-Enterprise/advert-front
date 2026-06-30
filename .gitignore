@@ -1,0 +1,19 @@
+# Secrets — never commit
+backend/.env
+frontend/.env.local
+backend/k8s/secret.yaml
+backend/k8s/db/db-secret.yaml
+frontend/k8s/secret.yaml
+
+# Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# Backend
+backend/target/
+
+# IDE
+.idea/
+*.iml
+.DS_Store
