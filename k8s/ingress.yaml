@@ -5,7 +5,6 @@ metadata:
   namespace: advert-front
   annotations:
     kubernetes.io/ingress.class: traefik
-    traefik.ingress.kubernetes.io/router.middlewares: advert-front-sockjs-strip@kubernetescrd
 spec:
   rules:
     - host: advert.thesis-i.com
