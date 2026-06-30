@@ -8,13 +8,11 @@ import { RecommendationResponse } from '@/types/recommendation'
 function getWsUrl(): string {
   if (typeof window === 'undefined') return 'http://localhost:8080/api/ws/chat'
   const { protocol, hostname } = window.location
-  const proto = protocol === 'https:' ? 'https' : 'http'
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     return 'http://localhost:8080/api/ws/chat'
   }
-  // prod: advert.thesis-i.com → advert-back.thesis-i.com
-  const backendHost = hostname.replace(/^[^.]+\./, 'advert-back.')
-  return `${proto}://${backendHost}/api/ws/chat`
+  // Use same origin — Next.js rewrite proxies /api/* to backend (incl. WS upgrades)
+  return `${protocol}//${hostname}/api/ws/chat`
 }
 
 export function useWebSocket() {
