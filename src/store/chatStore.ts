@@ -16,6 +16,7 @@ interface ChatStore {
   appendStreamChunk: (chunk: string) => void
   finalizeStream: () => void
   setRecommendations: (r: RecommendationResponse) => void
+  loadMessages: (msgs: ChatMessage[]) => void
   reset: () => void
   newChat: () => void
 }
@@ -34,7 +35,6 @@ export const useChatStore = create<ChatStore>((set) => ({
   addMessage: (msg) =>
     set((s) => ({ messages: [...s.messages, msg] })),
 
-  // Streams into the last assistant message
   appendStreamChunk: (chunk) =>
     set((s) => {
       const messages = [...s.messages]
@@ -53,8 +53,10 @@ export const useChatStore = create<ChatStore>((set) => ({
     }),
 
   finalizeStream: () => set({ isTyping: false }),
-
   setRecommendations: (r) => set({ recommendations: r }),
+
+  // Load messages from a saved session (history restore)
+  loadMessages: (msgs) => set({ messages: msgs, recommendations: null, isTyping: false }),
 
   reset: () => set({
     sessionId: null,
@@ -69,7 +71,6 @@ export const useChatStore = create<ChatStore>((set) => ({
     messages: [],
     isTyping: false,
     recommendations: null,
-    // isConnected залишається — сокет фізично відкритий
     isConnected: s.isConnected,
   })),
 }))

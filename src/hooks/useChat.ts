@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect } from 'react'
 import { useChatStore } from '@/store/chatStore'
+import { useAuthStore } from '@/store/authStore'
 import { useWebSocket } from './useWebSocket'
 import { ChatMessage } from '@/types/chat'
 
 export function useChat() {
   const store = useChatStore()
+  const token = useAuthStore(s => s.token)
   const { sendChatMessage } = useWebSocket()
 
   // Create session on mount and after newChat()
@@ -16,7 +18,10 @@ export function useChat() {
     const userId = `user_${crypto.randomUUID().slice(0, 8)}`
     let cancelled = false
 
-    fetch(`/api/chat/sessions?userId=${userId}`, { method: 'POST' })
+    const headers: Record<string, string> = {}
+    if (token) headers['Authorization'] = `Bearer ${token}`
+
+    fetch(`/api/chat/sessions?userId=${userId}`, { method: 'POST', headers })
       .then((r) => r.json())
       .then(({ sessionId }) => { if (!cancelled) store.setSessionId(sessionId) })
       .catch(console.error)

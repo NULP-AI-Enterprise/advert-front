@@ -344,3 +344,15 @@ body::before {
   to   { opacity: 1; transform: translateY(0); }
 }
 .anim-in { animation: fadeSlideUp 0.25s cubic-bezier(0.16,1,0.3,1) both; }
+
+/* ─── Auth ───────────────────────────────────────── */
+.auth-shell {
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg);
+}
+.auth-card {
+  width: 100%; max-width: 380px;
+  background: var(--bg-1); border: 1px solid var(--bd);
+  border-radius: 16px; padding: 32px;
+}
