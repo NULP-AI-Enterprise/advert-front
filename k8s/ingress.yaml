@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: advert-front
+  namespace: advert-front
+  annotations:
+    kubernetes.io/ingress.class: traefik
+spec:
+  rules:
+    - host: advert.thesis-i.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: advert-front
+                port:
+                  number: 3000
