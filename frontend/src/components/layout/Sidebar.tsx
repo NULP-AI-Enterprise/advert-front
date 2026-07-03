@@ -6,8 +6,8 @@ import { useAuthStore } from '@/store/authStore'
 import { useSessions, SessionSummary } from '@/hooks/useSessions'
 
 export default function Sidebar({ onNewChat }: { onNewChat: () => void }) {
-  const isConnected = useChatStore(s => s.isConnected)
-  const sessionId   = useChatStore(s => s.sessionId)
+  const isConnected  = useChatStore(s => s.isConnected)
+  const sessionId    = useChatStore(s => s.sessionId)
   const setSessionId = useChatStore(s => s.setSessionId)
   const loadMessages = useChatStore(s => s.loadMessages)
 
@@ -41,7 +41,7 @@ export default function Sidebar({ onNewChat }: { onNewChat: () => void }) {
         <div className="sidebar-logo-icon">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path d="M7 1.5L12.5 4.5V9.5L7 12.5L1.5 9.5V4.5L7 1.5Z"
-                  stroke="white" strokeWidth="1.4" strokeLinejoin="round"/>
+                  stroke="white" strokeWidth="1.5" strokeLinejoin="round"/>
             <circle cx="7" cy="7" r="1.5" fill="white"/>
           </svg>
         </div>
@@ -50,54 +50,63 @@ export default function Sidebar({ onNewChat }: { onNewChat: () => void }) {
 
       {/* Body */}
       <div className="sidebar-body">
-        <button className="btn btn-w" onClick={onNewChat}>
-          <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-            <path d="M6.5 1v11M1 6.5h11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+        <button className="btn-new-chat" onClick={onNewChat}>
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ flexShrink: 0 }}>
+            <path d="M6.5 1v11M1 6.5h11" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
           </svg>
           New chat
         </button>
 
-        <div className="divider" style={{ marginTop: 12 }}/>
-        <p className="section-label">CHATS</p>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {sessions.length === 0 && (
-            <p style={{ fontSize: 12, color: 'var(--t3)', padding: '0 8px' }}>No chats yet</p>
-          )}
-          {sessions.map(s => (
-            <SessionRow
-              key={s.id}
-              session={s}
-              active={s.id === sessionId}
-              onOpen={() => openSession(s)}
-              onDelete={() => deleteSession(s.id)}
-            />
-          ))}
-        </div>
+        {sessions.length > 0 && (
+          <>
+            <p className="section-label" style={{ marginTop: 16 }}>Recent</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              {sessions.map(s => (
+                <SessionRow
+                  key={s.id}
+                  session={s}
+                  active={s.id === sessionId}
+                  onOpen={() => openSession(s)}
+                  onDelete={() => deleteSession(s.id)}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Footer — auth */}
-      <div className="sidebar-footer" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%' }}>
+      {/* Footer */}
+      <div className="sidebar-footer">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
           <span className={`status-dot ${isConnected ? 'online' : ''}`}/>
           <span className="status-text">{isConnected ? 'Connected' : 'Connecting…'}</span>
         </div>
 
         {token && user ? (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-            <span style={{ fontSize: 11, color: 'var(--t2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-              {user.email}
-            </span>
+          <div className="user-chip" style={{ padding: '4px 6px' }}>
+            <div className="user-avatar">
+              {user.email?.[0]?.toUpperCase() ?? 'U'}
+            </div>
+            <span className="user-email">{user.email}</span>
             <button
               onClick={logout}
-              style={{ fontSize: 10, color: 'var(--t3)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', flexShrink: 0 }}
+              title="Sign out"
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                padding: '2px', color: 'var(--t3)', fontSize: 11,
+                borderRadius: 4, flexShrink: 0,
+                display: 'flex', alignItems: 'center',
+              }}
             >
-              вийти
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                <path d="M8.5 4.5L11 7m0 0l-2.5 2.5M11 7H5M5 2H3.5A1.5 1.5 0 002 3.5v6A1.5 1.5 0 003.5 11H5"
+                      stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </button>
           </div>
         ) : (
-          <a href="/auth/login" style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none' }}>
-            Увійти →
+          <a href="/auth/login" style={{ fontSize: 12, color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
+            Sign in →
           </a>
         )}
       </div>
@@ -113,38 +122,25 @@ function SessionRow({
   onOpen: () => void
   onDelete: () => void
 }) {
-  const [hovered, setHovered] = useState(false)
-
   return (
     <div
+      className={`session-row ${active ? 'active' : ''}`}
       onClick={onOpen}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '8px 10px', borderRadius: 8, cursor: 'pointer',
-        background: active ? 'var(--bg-2)' : hovered ? 'var(--bg-2)' : 'transparent',
-        transition: 'background 0.1s',
-      }}
     >
-      <span style={{
-        fontSize: 12, color: active ? 'var(--t1)' : 'var(--t2)',
-        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
-      }}>
-        {session.title || 'New Chat'}
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0, color: active ? 'var(--accent)' : 'var(--t4)' }}>
+        <path d="M2 2h8a1 1 0 011 1v5a1 1 0 01-1 1H7L5 11V9H2a1 1 0 01-1-1V3a1 1 0 011-1z"
+              stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
+      </svg>
+      <span className="session-row-title">
+        {session.title || 'New conversation'}
       </span>
-      {hovered && (
-        <button
-          onClick={e => { e.stopPropagation(); onDelete() }}
-          style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            padding: '0 2px', color: 'var(--t3)', fontSize: 14, flexShrink: 0,
-          }}
-          title="Delete"
-        >
-          ×
-        </button>
-      )}
+      <button
+        className="session-delete"
+        onClick={e => { e.stopPropagation(); onDelete() }}
+        title="Delete"
+      >
+        ×
+      </button>
     </div>
   )
 }

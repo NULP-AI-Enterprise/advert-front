@@ -1,0 +1,118 @@
+{
+  "database": "advertising_db",
+  "engine": "PostgreSQL 15",
+  "extensions": ["pgvector", "uuid-ossp"],
+  "tables": {
+    "users": {
+      "description": "Зареєстровані користувачі (auth через magic link)",
+      "columns": {
+        "id":            { "type": "UUID", "pk": true, "default": "uuid_generate_v4()" },
+        "email":         { "type": "VARCHAR(255)", "nullable": false, "unique": true },
+        "display_name":  { "type": "VARCHAR(255)", "nullable": true },
+        "created_at":    { "type": "TIMESTAMPTZ", "default": "NOW()" },
+        "last_login_at": { "type": "TIMESTAMPTZ", "nullable": true }
+      },
+      "indexes": ["idx_users_email (email)"]
+    },
+
+    "magic_links": {
+      "description": "Одноразові токени для входу по email",
+      "columns": {
+        "id":         { "type": "UUID", "pk": true, "default": "uuid_generate_v4()" },
+        "user_id":    { "type": "UUID", "fk": "users.id", "nullable": false },
+        "token":      { "type": "VARCHAR(255)", "nullable": false, "unique": true },
+        "used":       { "type": "BOOLEAN", "nullable": false, "default": false },
+        "expires_at": { "type": "TIMESTAMPTZ", "nullable": false },
+        "created_at": { "type": "TIMESTAMPTZ", "default": "NOW()" }
+      },
+      "indexes": ["idx_magic_links_token (token)"],
+      "ttl_note": "токен дійсний 15 хвилин, після використання used=true"
+    },
+
+    "chat_sessions": {
+      "description": "Сесії розмов з AI-асистентом",
+      "columns": {
+        "id":         { "type": "UUID", "pk": true, "default": "uuid_generate_v4()" },
+        "user_id":    { "type": "VARCHAR(255)", "nullable": false, "note": "рядок, не FK — legacy" },
+        "user_ref":   { "type": "UUID", "fk": "users.id", "nullable": true, "note": "додано пізніше для зв'язку з users" },
+        "title":      { "type": "VARCHAR(255)", "default": "'New Chat'" },
+        "context":    { "type": "JSONB", "default": "{}", "note": "поточний стан діалогу, параметри кампанії" },
+        "created_at": { "type": "TIMESTAMPTZ", "default": "NOW()" },
+        "updated_at": { "type": "TIMESTAMPTZ", "default": "NOW()" }
+      },
+      "indexes": ["idx_chat_sessions_user_id (user_id)"],
+      "context_shape": {
+        "campaignObjective": "string",
+        "targetAudience": "string",
+        "categories": ["string"],
+        "lastRecommendations": "array"
+      }
+    },
+
+    "chat_messages": {
+      "description": "Повідомлення в межах сесії",
+      "columns": {
+        "id":         { "type": "UUID", "pk": true, "default": "uuid_generate_v4()" },
+        "session_id": { "type": "UUID", "fk": "chat_sessions.id", "nullable": false, "cascade": "DELETE" },
+        "role":       { "type": "VARCHAR(20)", "enum": ["user", "assistant", "system"] },
+        "content":    { "type": "TEXT", "nullable": false },
+        "metadata":   { "type": "JSONB", "default": "{}", "note": "токени, model, latency тощо" },
+        "created_at": { "type": "TIMESTAMPTZ", "default": "NOW()" }
+      },
+      "indexes": ["idx_chat_messages_session_id (session_id)"]
+    },
+
+    "media_items": {
+      "description": "Медіа-майданчики для рекомендацій (новинники, ТВ, радіо тощо)",
+      "columns": {
+        "id":          { "type": "UUID", "pk": true, "default": "uuid_generate_v4()" },
+        "title":       { "type": "VARCHAR(500)", "nullable": false, "note": "назва новинника" },
+        "description": { "type": "TEXT", "nullable": true },
+        "category":    { "type": "VARCHAR(100)", "nullable": true, "note": "Новини|Бізнес|Технології|Спорт|..." },
+        "tags":        { "type": "TEXT[]", "nullable": true, "max_items": 50 },
+        "audience":    {
+          "type": "JSONB",
+          "default": "{}",
+          "shape": {
+            "age_range": "25-45",
+            "interests": ["finance", "politics"],
+            "demographics": {
+              "primary_language": "uk",
+              "geo": "Ukraine",
+              "gender_split": "55M/45F"
+            }
+          }
+        },
+        "metrics":     {
+          "type": "JSONB",
+          "default": "{}",
+          "shape": {
+            "monthly_visitors": 1500000,
+            "reach_tier": "national",
+            "data_source": "llm_estimate"
+          }
+        },
+        "embedding":   { "type": "vector(1536)", "nullable": true, "note": "OpenAI text-embedding-3-small" },
+        "created_at":  { "type": "TIMESTAMPTZ", "default": "NOW()" },
+        "updated_at":  { "type": "TIMESTAMPTZ", "default": "NOW()" }
+      },
+      "indexes": [
+        "idx_media_items_category (category) — btree, для SQL-фільтрації",
+        "idx_media_items_embedding USING ivfflat (embedding vector_cosine_ops) WITH (lists=100) — для ANN пошуку"
+      ]
+    }
+  },
+
+  "relations": [
+    "users 1──* magic_links    (users.id → magic_links.user_id)",
+    "users 1──* chat_sessions  (users.id → chat_sessions.user_ref, nullable)",
+    "chat_sessions 1──* chat_messages (chat_sessions.id → chat_messages.session_id, CASCADE DELETE)"
+  ],
+
+  "notes": {
+    "chat_sessions.user_id": "VARCHAR замість UUID FK — legacy поле, user_ref додано пізніше",
+    "media_items.embedding": "Transient в Hibernate, оновлюється тільки через нативний SQL (updateEmbeddingById)",
+    "vector_index": "ivfflat з lists=100, потребує мінімум 10k рядків для ефективності",
+    "ddl_auto": "hibernate ddl-auto=update — схема автоматично оновлюється при старті"
+  }
+}

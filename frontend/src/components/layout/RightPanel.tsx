@@ -10,24 +10,13 @@ export default function RightPanel() {
 
   return (
     <aside className="right-panel anim-in">
-      <div className="right-panel-tabs">
-        <button className="btn btn-tab active">
-          <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-            <rect x="0.5" y="0.5" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="1.1"/>
-            <rect x="6.5" y="0.5" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="1.1"/>
-            <rect x="0.5" y="6.5" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="1.1"/>
-            <rect x="6.5" y="6.5" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="1.1"/>
-          </svg>
-          Media
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            width: 16, height: 16, borderRadius: '50%',
-            background: 'var(--accent)', color: '#fff',
-            fontSize: 9, fontFamily: 'var(--font-mono)'
-          }}>
-            {recs.recommendations.length}
-          </span>
-        </button>
+      <div className="right-panel-header">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+          <path d="M2 2.5h4v4H2v-4zM9 2.5h4v4H9v-4zM2 9.5h4v3H2v-3zM9 9.5h4v3H9v-3z"
+                stroke="var(--accent)" strokeWidth="1.2" strokeLinejoin="round"/>
+        </svg>
+        <h3>Media Placements</h3>
+        <span className="badge">{recs.recommendations.length}</span>
       </div>
 
       <div className="right-panel-body">

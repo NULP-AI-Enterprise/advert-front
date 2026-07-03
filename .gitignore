@@ -1,3 +1,6 @@
+# Enrichment — separate repo, managed independently
+enrichment/
+
 # Secrets — never commit
 backend/.env
 frontend/.env.local
