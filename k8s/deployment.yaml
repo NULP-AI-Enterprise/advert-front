@@ -35,6 +35,17 @@ spec:
                 secretKeyRef:
                   name: advert-front-secret
                   key: BACKEND_URL
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: advert-front-secret
+                  key: DATABASE_URL
+            - name: ENRICHMENT_URL
+              valueFrom:
+                secretKeyRef:
+                  name: advert-front-secret
+                  key: ENRICHMENT_URL
+                  optional: true
           resources:
             requests:
               cpu: 100m

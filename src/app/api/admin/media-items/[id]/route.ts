@@ -10,33 +10,38 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   const { id } = params;
-  const body = await request.json();
-  const { title, description, category, tags, audience, metrics } = body;
+  try {
+    const body = await request.json();
+    const { title, description, category, tags, audience, metrics } = body;
 
-  await pool.query(
-    `UPDATE media_items
-     SET title=$1, description=$2, category=$3, tags=$4, audience=$5, metrics=$6, updated_at=NOW()
-     WHERE id=$7`,
-    [
-      title,
-      description ?? null,
-      category ?? null,
-      tags ?? [],
-      audience != null ? (typeof audience === 'string' ? audience : JSON.stringify(audience)) : null,
-      metrics != null ? (typeof metrics === 'string' ? metrics : JSON.stringify(metrics)) : null,
-      id,
-    ]
-  );
+    await pool.query(
+      `UPDATE media_items
+       SET title=$1, description=$2, category=$3, tags=$4, audience=$5, metrics=$6, updated_at=NOW()
+       WHERE id=$7`,
+      [
+        title,
+        description ?? null,
+        category ?? null,
+        tags ?? [],
+        audience != null ? (typeof audience === 'string' ? audience : JSON.stringify(audience)) : null,
+        metrics != null ? (typeof metrics === 'string' ? metrics : JSON.stringify(metrics)) : null,
+        id,
+      ]
+    );
 
-  const result = await pool.query(
-    `SELECT id, title, description, category, tags, audience, metrics,
-       CASE WHEN embedding IS NOT NULL THEN true ELSE false END as has_embedding,
-       created_at, updated_at
-     FROM media_items WHERE id=$1`,
-    [id]
-  );
+    const result = await pool.query(
+      `SELECT id, title, description, category, tags, audience, metrics,
+         CASE WHEN embedding IS NOT NULL THEN true ELSE false END as has_embedding,
+         created_at, updated_at
+       FROM media_items WHERE id=$1`,
+      [id]
+    );
 
-  return NextResponse.json(result.rows[0]);
+    return NextResponse.json(result.rows[0]);
+  } catch (err: any) {
+    console.error('[admin/media-items PUT]', err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
 }
 
 export async function DELETE(
@@ -44,6 +49,11 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   const { id } = params;
-  await pool.query('DELETE FROM media_items WHERE id=$1', [id]);
-  return NextResponse.json({ success: true });
+  try {
+    await pool.query('DELETE FROM media_items WHERE id=$1', [id]);
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    console.error('[admin/media-items DELETE]', err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
 }

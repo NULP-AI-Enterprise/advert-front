@@ -30,46 +30,56 @@ export async function GET(request: NextRequest) {
   const countValues = [...values];
   const dataValues = [...values, pageSize, offset];
 
-  const [countResult, dataResult] = await Promise.all([
-    pool.query(`SELECT COUNT(*) FROM media_items ${where}`, countValues),
-    pool.query(
-      `SELECT id, title, description, category, tags, audience, metrics,
-        CASE WHEN embedding IS NOT NULL THEN true ELSE false END as has_embedding,
-        created_at, updated_at
-       FROM media_items ${where}
-       ORDER BY created_at DESC
-       LIMIT $${values.length + 1} OFFSET $${values.length + 2}`,
-      dataValues
-    ),
-  ]);
+  try {
+    const [countResult, dataResult] = await Promise.all([
+      pool.query(`SELECT COUNT(*) FROM media_items ${where}`, countValues),
+      pool.query(
+        `SELECT id, title, description, category, tags, audience, metrics,
+          CASE WHEN embedding IS NOT NULL THEN true ELSE false END as has_embedding,
+          created_at, updated_at
+         FROM media_items ${where}
+         ORDER BY created_at DESC
+         LIMIT $${values.length + 1} OFFSET $${values.length + 2}`,
+        dataValues
+      ),
+    ]);
 
-  return NextResponse.json({
-    items: dataResult.rows,
-    total: parseInt(countResult.rows[0].count, 10),
-    page,
-    pageSize,
-  });
+    return NextResponse.json({
+      items: dataResult.rows,
+      total: parseInt(countResult.rows[0].count, 10),
+      page,
+      pageSize,
+    });
+  } catch (err: any) {
+    console.error('[admin/media-items GET]', err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
 }
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
   const { title, description, category, tags, audience, metrics } = body;
 
-  const result = await pool.query(
-    `INSERT INTO media_items (id, title, description, category, tags, audience, metrics, created_at, updated_at)
-     VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, NOW(), NOW())
-     RETURNING id, title, description, category, tags, audience, metrics,
-       CASE WHEN embedding IS NOT NULL THEN true ELSE false END as has_embedding,
-       created_at, updated_at`,
-    [
-      title,
-      description ?? null,
-      category ?? null,
-      tags ?? [],
-      audience != null ? (typeof audience === 'string' ? audience : JSON.stringify(audience)) : null,
-      metrics != null ? (typeof metrics === 'string' ? metrics : JSON.stringify(metrics)) : null,
-    ]
-  );
+  try {
+    const result = await pool.query(
+      `INSERT INTO media_items (id, title, description, category, tags, audience, metrics, created_at, updated_at)
+       VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, NOW(), NOW())
+       RETURNING id, title, description, category, tags, audience, metrics,
+         CASE WHEN embedding IS NOT NULL THEN true ELSE false END as has_embedding,
+         created_at, updated_at`,
+      [
+        title,
+        description ?? null,
+        category ?? null,
+        tags ?? [],
+        audience != null ? (typeof audience === 'string' ? audience : JSON.stringify(audience)) : null,
+        metrics != null ? (typeof metrics === 'string' ? metrics : JSON.stringify(metrics)) : null,
+      ]
+    );
 
-  return NextResponse.json(result.rows[0], { status: 201 });
+    return NextResponse.json(result.rows[0], { status: 201 });
+  } catch (err: any) {
+    console.error('[admin/media-items POST]', err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
 }
