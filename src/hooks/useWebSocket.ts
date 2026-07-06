@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useCallback } from 'react'
-import { useChatStore } from '@/store/chatStore'
-import { WebSocketMessage } from '@/types/chat'
+import { useChatStore, MarketingPlan } from '@/store/chatStore'
+import { DeviceContext, WebSocketMessage } from '@/types/chat'
 import { RecommendationResponse } from '@/types/recommendation'
 
 function getWsUrl(): string {
@@ -11,7 +11,6 @@ function getWsUrl(): string {
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     return 'http://localhost:8080/api/ws/chat'
   }
-  // Use same origin — Next.js rewrite proxies /api/* to backend (incl. WS upgrades)
   return `${protocol}//${hostname}/api/ws/chat`
 }
 
@@ -23,7 +22,7 @@ export function useWebSocket() {
   const {
     sessionId, setConnected, setTyping,
     addMessage, appendStreamChunk, finalizeStream,
-    setRecommendations,
+    setRecommendations, setMarketingPlan,
   } = useChatStore()
 
   const handleMessage = useCallback((raw: string) => {
@@ -34,23 +33,63 @@ export function useWebSocket() {
       case 'CLARIFICATION_QUESTION':
       case 'ASSISTANT_MESSAGE':
         setTyping(false)
-        addMessage({ id: crypto.randomUUID(), role: 'assistant', content: msg.content ?? '', createdAt: new Date() })
+        addMessage({
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: msg.content ?? '',
+          createdAt: new Date(),
+        })
         break
+
       case 'ASSISTANT_STREAM_CHUNK':
         setTyping(true)
         appendStreamChunk(msg.content ?? '')
         break
+
       case 'ASSISTANT_STREAM_END':
         finalizeStream()
         break
-      case 'RECOMMENDATIONS_READY':
+
+      case 'RECOMMENDATIONS_READY': {
         setTyping(false)
-        setRecommendations(msg.payload as RecommendationResponse)
-        addMessage({ id: crypto.randomUUID(), role: 'assistant', content: '', type: 'recommendations', payload: msg.payload, createdAt: new Date() })
+        const recs = msg.payload as RecommendationResponse & {
+          ctaMessage?: string
+          suggestions?: string[]
+        }
+        setRecommendations(recs)
+        addMessage({
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: recs.ctaMessage ?? 'Placements ready — see the panel on the right',
+          type: 'recommendations',
+          payload: recs,
+          suggestions: recs.suggestions ?? [],
+          createdAt: new Date(),
+        })
         break
+      }
+
+      case 'MARKETING_PLAN_READY':
+        setTyping(false)
+        setMarketingPlan(msg.payload as MarketingPlan)
+        addMessage({
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: 'Marketing plan ready — see the panel on the right.',
+          type: 'plan',
+          createdAt: new Date(),
+        })
+        break
+
       case 'ERROR':
         setTyping(false)
-        addMessage({ id: crypto.randomUUID(), role: 'assistant', content: `Error: ${msg.error}`, type: 'error', createdAt: new Date() })
+        addMessage({
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: `Error: ${msg.error}`,
+          type: 'error',
+          createdAt: new Date(),
+        })
         break
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -59,8 +98,6 @@ export function useWebSocket() {
   const connect = useCallback(() => {
     if (!mountedRef.current) return
     if (socketRef.current?.readyState === 1) return
-
-    // SockJS must run only in browser
     if (typeof window === 'undefined') return
 
     // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -87,8 +124,15 @@ export function useWebSocket() {
     }
   }, [])
 
-  const sendChatMessage = useCallback((content: string) => {
-    if (sessionId) send({ type: 'CHAT_MESSAGE', sessionId, content })
+  const sendChatMessage = useCallback((content: string, deviceContext?: DeviceContext | null) => {
+    if (sessionId) {
+      send({
+        type: 'CHAT_MESSAGE',
+        sessionId,
+        content,
+        payload: deviceContext ? { deviceContext } : undefined,
+      })
+    }
   }, [send, sessionId])
 
   useEffect(() => {

@@ -8,9 +8,16 @@ export type MessageType =
   | 'ASSISTANT_STREAM_END'
   | 'RECOMMENDATIONS_READY'
   | 'CLARIFICATION_QUESTION'
+  | 'MARKETING_PLAN_READY'
   | 'ERROR'
   | 'PING'
   | 'PONG'
+
+export interface DeviceContext {
+  lat?: number
+  lon?: number
+  language?: string
+}
 
 export interface WebSocketMessage {
   type: MessageType
@@ -25,8 +32,9 @@ export interface ChatMessage {
   id: string
   role: MessageRole
   content: string
-  type?: 'text' | 'recommendations' | 'error'
+  type?: 'text' | 'recommendations' | 'error' | 'plan'
   payload?: unknown
+  suggestions?: string[]
   createdAt: Date
 }
 

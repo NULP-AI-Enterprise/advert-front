@@ -1,6 +1,13 @@
 import { create } from 'zustand'
-import { ChatMessage } from '@/types/chat'
+import { ChatMessage, DeviceContext } from '@/types/chat'
 import { RecommendationResponse } from '@/types/recommendation'
+
+export interface MarketingPlan {
+  objective: string
+  placements: Array<{ media_title: string; suggested_format: string; budget_share_pct: number }>
+  total_budget_note: string
+  notes: string
+}
 
 interface ChatStore {
   sessionId: string | null
@@ -8,6 +15,8 @@ interface ChatStore {
   isConnected: boolean
   isTyping: boolean
   recommendations: RecommendationResponse | null
+  marketingPlan: MarketingPlan | null
+  deviceContext: DeviceContext | null
 
   setSessionId: (id: string) => void
   setConnected: (v: boolean) => void
@@ -16,6 +25,8 @@ interface ChatStore {
   appendStreamChunk: (chunk: string) => void
   finalizeStream: () => void
   setRecommendations: (r: RecommendationResponse) => void
+  setMarketingPlan: (plan: MarketingPlan) => void
+  setDeviceContext: (ctx: DeviceContext) => void
   loadMessages: (msgs: ChatMessage[]) => void
   reset: () => void
   newChat: () => void
@@ -27,6 +38,8 @@ export const useChatStore = create<ChatStore>((set) => ({
   isConnected: false,
   isTyping: false,
   recommendations: null,
+  marketingPlan: null,
+  deviceContext: null,
 
   setSessionId: (id) => set({ sessionId: id }),
   setConnected: (v) => set({ isConnected: v }),
@@ -54,9 +67,10 @@ export const useChatStore = create<ChatStore>((set) => ({
 
   finalizeStream: () => set({ isTyping: false }),
   setRecommendations: (r) => set({ recommendations: r }),
+  setMarketingPlan: (plan) => set({ marketingPlan: plan }),
+  setDeviceContext: (ctx) => set({ deviceContext: ctx }),
 
-  // Load messages from a saved session (history restore)
-  loadMessages: (msgs) => set({ messages: msgs, recommendations: null, isTyping: false }),
+  loadMessages: (msgs) => set({ messages: msgs, recommendations: null, marketingPlan: null, isTyping: false }),
 
   reset: () => set({
     sessionId: null,
@@ -64,6 +78,7 @@ export const useChatStore = create<ChatStore>((set) => ({
     isConnected: false,
     isTyping: false,
     recommendations: null,
+    marketingPlan: null,
   }),
 
   newChat: () => set((s) => ({
@@ -71,6 +86,7 @@ export const useChatStore = create<ChatStore>((set) => ({
     messages: [],
     isTyping: false,
     recommendations: null,
+    marketingPlan: null,
     isConnected: s.isConnected,
   })),
 }))

@@ -11,7 +11,7 @@ export function useChat() {
   const token = useAuthStore(s => s.token)
   const { sendChatMessage } = useWebSocket()
 
-  // Create session on mount and after newChat()
+  // Create session on mount; also capture geolocation + language
   useEffect(() => {
     if (store.sessionId) return
 
@@ -26,6 +26,27 @@ export function useChat() {
       .then(({ sessionId }) => { if (!cancelled) store.setSessionId(sessionId) })
       .catch(console.error)
 
+    // Capture device language immediately
+    const language = navigator.language || navigator.languages?.[0] || 'uk'
+    store.setDeviceContext({ language })
+
+    // Request geolocation (non-blocking)
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          if (!cancelled) {
+            store.setDeviceContext({
+              lat: pos.coords.latitude,
+              lon: pos.coords.longitude,
+              language,
+            })
+          }
+        },
+        () => { /* permission denied or unavailable — silently ignore */ },
+        { timeout: 5000, maximumAge: 600000 }
+      )
+    }
+
     return () => { cancelled = true }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [store.sessionId])
@@ -39,7 +60,7 @@ export function useChat() {
     }
     store.addMessage(userMsg)
     store.setTyping(true)
-    sendChatMessage(content)
+    sendChatMessage(content, store.deviceContext)
   }, [store, sendChatMessage])
 
   return {
@@ -48,6 +69,7 @@ export function useChat() {
     isTyping: store.isTyping,
     sessionId: store.sessionId,
     recommendations: store.recommendations,
+    marketingPlan: store.marketingPlan,
     sendMessage,
   }
 }
