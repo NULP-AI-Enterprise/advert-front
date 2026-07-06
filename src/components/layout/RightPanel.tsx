@@ -33,7 +33,7 @@ export default function RightPanel() {
               marginTop: 16,
               padding: '10px 0',
               borderRadius: 8,
-              border: '1px dashed var(--border)',
+              border: '1px dashed var(--bd)',
               background: 'transparent',
               color: 'var(--accent)',
               fontSize: 12,
@@ -42,7 +42,7 @@ export default function RightPanel() {
               letterSpacing: '0.03em',
               transition: 'background 0.15s',
             }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg2)')}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-2)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
           >
             ✦ Generate Marketing Plan
@@ -59,7 +59,7 @@ function MarketingPlanCard({ plan }: { plan: MarketingPlan }) {
   const totalPct = plan.placements.reduce((s: number, p: MarketingPlan['placements'][number]) => s + (p.budget_share_pct ?? 0), 0)
 
   return (
-    <div style={{ marginTop: 20, borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+    <div style={{ marginTop: 20, borderTop: '1px solid var(--bd)', paddingTop: 16 }}>
       <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
                   color: 'var(--accent)', marginBottom: 10 }}>
         Marketing Plan
@@ -78,7 +78,7 @@ function MarketingPlanCard({ plan }: { plan: MarketingPlan }) {
             </div>
             <div style={{ color: 'var(--t3)', fontSize: 11 }}>{p.suggested_format}</div>
             <div style={{
-              height: 3, borderRadius: 2, background: 'var(--border)', marginTop: 4,
+              height: 3, borderRadius: 2, background: 'var(--bd)', marginTop: 4,
               overflow: 'hidden',
             }}>
               <div style={{

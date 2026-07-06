@@ -51,14 +51,14 @@ export default function MessageBubble({ message }: { message: ChatMessage }) {
                   fontSize: 11,
                   padding: '4px 10px',
                   borderRadius: 20,
-                  border: '1px solid var(--border)',
-                  background: 'var(--bg2)',
+                  border: '1px solid var(--bd)',
+                  background: 'var(--bg-2)',
                   color: 'var(--t2)',
                   cursor: 'pointer',
                   transition: 'background 0.15s',
                 }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'var(--accent-dim, var(--bg3, #2a2a3a))')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'var(--bg2)')}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-3)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'var(--bg-2)')}
               >
                 {s}
               </button>
