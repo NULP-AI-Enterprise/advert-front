@@ -60,7 +60,7 @@ export function useWebSocket() {
         addMessage({
           id: crypto.randomUUID(),
           role: 'assistant',
-          content: recs.ctaMessage ?? 'Placements ready — see the panel on the right',
+          content: recs.ctaMessage ?? msg.content ?? 'Placements ready — see the panel on the right',
           type: 'recommendations',
           payload: recs,
           suggestions: recs.suggestions ?? [],
