@@ -1,6 +1,6 @@
 'use client'
 
-import { useChatStore } from '@/store/chatStore'
+import { useChatStore, MarketingPlan } from '@/store/chatStore'
 import { useChat } from '@/hooks/useChat'
 import RecommendationCard from '../recommendation/RecommendationCard'
 
@@ -55,8 +55,8 @@ export default function RightPanel() {
   )
 }
 
-function MarketingPlanCard({ plan }: { plan: NonNullable<ReturnType<typeof useChatStore>['marketingPlan']> }) {
-  const totalPct = plan.placements.reduce((s, p) => s + (p.budget_share_pct ?? 0), 0)
+function MarketingPlanCard({ plan }: { plan: MarketingPlan }) {
+  const totalPct = plan.placements.reduce((s: number, p: MarketingPlan['placements'][number]) => s + (p.budget_share_pct ?? 0), 0)
 
   return (
     <div style={{ marginTop: 20, borderTop: '1px solid var(--border)', paddingTop: 16 }}>
@@ -70,7 +70,7 @@ function MarketingPlanCard({ plan }: { plan: NonNullable<ReturnType<typeof useCh
       </p>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
-        {plan.placements.map((p, i) => (
+        {plan.placements.map((p: MarketingPlan['placements'][number], i: number) => (
           <div key={i} style={{ fontSize: 12 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
               <span style={{ color: 'var(--t1)', fontWeight: 600, flex: 1, marginRight: 8 }}>{p.media_title}</span>
