@@ -21,7 +21,7 @@ spec:
         - name: ghcr-secret
       containers:
         - name: advert-front
-          image: ghcr.io/nulp-ai-enterprise/advert-front:sha-04d2961
+          image: ghcr.io/nulp-ai-enterprise/advert-front:sha-8137e4e
           ports:
             - containerPort: 3000
           env:
