@@ -64,6 +64,7 @@ export function useWebSocket() {
           type: 'recommendations',
           payload: recs,
           suggestions: recs.suggestions ?? [],
+          reasoning: recs.reasoning ?? undefined,
           createdAt: new Date(),
         })
         break

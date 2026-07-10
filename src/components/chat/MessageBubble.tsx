@@ -1,7 +1,36 @@
 'use client'
 
+import ReactMarkdown from 'react-markdown'
 import { ChatMessage } from '@/types/chat'
 import { useChat } from '@/hooks/useChat'
+
+// Inline markdown renderer — renders **bold**, *italic*, `code` without block-level wrappers.
+// Used inside bubble spans so we don't break flex/inline layout with stray <p> tags.
+function InlineMd({ children }: { children: string }) {
+  return (
+    <ReactMarkdown
+      components={{
+        // Suppress wrapping <p> — keeps content inline inside a span/div
+        p: ({ children }) => <>{children}</>,
+        // Bold
+        strong: ({ children }) => (
+          <strong style={{ fontWeight: 700, color: 'var(--t1)' }}>{children}</strong>
+        ),
+        // Italic
+        em: ({ children }) => <em style={{ fontStyle: 'italic' }}>{children}</em>,
+        // Inline code
+        code: ({ children }) => (
+          <code style={{
+            fontFamily: 'var(--font-mono)', fontSize: '0.9em',
+            background: 'var(--bg-3)', padding: '1px 4px', borderRadius: 3,
+          }}>{children}</code>
+        ),
+      }}
+    >
+      {children}
+    </ReactMarkdown>
+  )
+}
 
 export default function MessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === 'user'
@@ -28,15 +57,39 @@ export default function MessageBubble({ message }: { message: ChatMessage }) {
         <div className={`msg-bubble ${isUser ? 'user-bubble' : 'ai-bubble'} ${message.type === 'error' ? 'error-bubble' : ''}`}>
           {message.type === 'recommendations' || message.type === 'plan'
             ? (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
-                <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                  <path d="M2 2.5h3.5v3.5H2V2.5zM7.5 2.5H11v3.5H7.5V2.5zM2 8H5.5v3H2V8zM7.5 8H11v3H7.5V8z"
-                        stroke="var(--accent)" strokeWidth="1.1" strokeLinejoin="round"/>
-                </svg>
-                {message.content}
-              </span>
+              <div>
+                <span style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 13 }}>
+                  <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ flexShrink: 0, marginTop: 2 }}>
+                    <path d="M2 2.5h3.5v3.5H2V2.5zM7.5 2.5H11v3.5H7.5V2.5zM2 8H5.5v3H2V8zM7.5 8H11v3H7.5V8z"
+                          stroke="var(--accent)" strokeWidth="1.1" strokeLinejoin="round"/>
+                  </svg>
+                  <span style={{ lineHeight: 1.6 }}>
+                    <InlineMd>{message.content}</InlineMd>
+                  </span>
+                </span>
+                {/* Strategy reasoning shown inline in chat so user doesn't miss it */}
+                {message.reasoning && (
+                  <div style={{
+                    marginTop: 10,
+                    paddingTop: 10,
+                    borderTop: '1px solid var(--bd)',
+                    fontSize: 12,
+                    color: 'var(--t2)',
+                    lineHeight: 1.65,
+                  }}>
+                    <span style={{
+                      display: 'block',
+                      fontSize: 9, fontWeight: 700, color: 'var(--accent)',
+                      textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4,
+                    }}>
+                      Strategy
+                    </span>
+                    {message.reasoning}
+                  </div>
+                )}
+              </div>
             )
-            : message.content
+            : <InlineMd>{message.content ?? ''}</InlineMd>
           }
         </div>
 

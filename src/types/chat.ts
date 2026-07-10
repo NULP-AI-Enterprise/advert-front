@@ -35,6 +35,7 @@ export interface ChatMessage {
   type?: 'text' | 'recommendations' | 'error' | 'plan'
   payload?: unknown
   suggestions?: string[]
+  reasoning?: string        // overall strategy reasoning shown inline in chat
   createdAt: Date
 }
 

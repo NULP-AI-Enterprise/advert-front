@@ -13,28 +13,6 @@ export default function RecommendationCard({ data }: { data: RecommendationRespo
         {data.recommendations.length} placement{data.recommendations.length !== 1 ? 's' : ''} found
       </p>
 
-      {/* Strategy reasoning block */}
-      {data.reasoning && (
-        <div style={{
-          marginBottom: 14,
-          padding: '10px 12px',
-          background: 'var(--bg-1)',
-          border: '1px solid var(--bd)',
-          borderLeft: '3px solid var(--accent)',
-          borderRadius: 8,
-        }}>
-          <p style={{
-            fontSize: 10, fontWeight: 600, color: 'var(--accent)',
-            textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 5,
-          }}>
-            Strategy
-          </p>
-          <p style={{ fontSize: 12, color: 'var(--t2)', lineHeight: 1.6 }}>
-            {data.reasoning}
-          </p>
-        </div>
-      )}
-
       {data.recommendations.map((item, i) => (
         <MediaRow key={item.id} item={item} index={i} />
       ))}
