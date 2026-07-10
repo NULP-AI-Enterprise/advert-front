@@ -87,6 +87,8 @@ export default function AdminDashboard() {
 
   const [toast, setToast] = useState<Toast | null>(null);
   const [detailItem, setDetailItem] = useState<MediaItem | null>(null);
+  const [enrichLimit, setEnrichLimit] = useState<string>('100');
+  const [enrichPopoverOpen, setEnrichPopoverOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -222,14 +224,16 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleEnrichAll = async () => {
+  const handleEnrichAll = async (limit?: number) => {
     try {
-      const res = await fetch('/api/admin/enrich-all', { method: 'POST' });
+      const url = limit ? `/api/admin/enrich-all?limit=${limit}` : '/api/admin/enrich-all';
+      const res = await fetch(url, { method: 'POST' });
       if (!res.ok) throw new Error();
-      const data = await res.json();
-      showToast(`Enrichment queued for ${data.count} items`, 'success');
+      const label = limit ? `${limit} items` : 'all items';
+      showToast(`Enrichment queued for ${label}`, 'success');
+      setEnrichPopoverOpen(false);
     } catch {
-      showToast('Enrich all failed', 'error');
+      showToast('Enrich failed', 'error');
     }
   };
 
@@ -274,10 +278,75 @@ export default function AdminDashboard() {
           <option value="">All Categories</option>
           {CATEGORIES.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
         </select>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
-          <button className="btn btn-ghost btn-sm" onClick={handleEnrichAll}>
-            Run Enrichment
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', position: 'relative' }}>
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={() => setEnrichPopoverOpen(p => !p)}
+          >
+            Run Enrichment ▾
           </button>
+          {enrichPopoverOpen && (
+            <div
+              style={{
+                position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+                background: '#fff', border: '1px solid var(--bd)', borderRadius: 'var(--r-lg)',
+                padding: '14px 16px', boxShadow: 'var(--shadow-md)',
+                zIndex: 200, minWidth: '220px',
+              }}
+            >
+              <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
+                Items to enrich
+              </p>
+              <div style={{ display: 'flex', gap: '6px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                {[10, 100, 500, 1000].map(n => (
+                  <button
+                    key={n}
+                    className={`btn btn-sm ${enrichLimit === String(n) ? 'btn-primary' : 'btn-ghost'}`}
+                    style={{ minWidth: '44px' }}
+                    onClick={() => setEnrichLimit(String(n))}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', alignItems: 'center' }}>
+                <input
+                  type="number"
+                  min={1}
+                  placeholder="Custom…"
+                  value={enrichLimit}
+                  onChange={e => setEnrichLimit(e.target.value)}
+                  style={{
+                    flex: 1, padding: '6px 8px',
+                    border: '1.5px solid var(--bd)', borderRadius: 'var(--r)',
+                    fontSize: '13px', fontFamily: 'var(--font)', outline: 'none',
+                  }}
+                  onFocus={e => (e.target.style.borderColor = 'var(--accent-bd)')}
+                  onBlur={e => (e.target.style.borderColor = 'var(--bd)')}
+                />
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => { setEnrichLimit(''); }}
+                  title="All items"
+                >
+                  All
+                </button>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button className="btn btn-ghost btn-sm" style={{ flex: 1 }} onClick={() => setEnrichPopoverOpen(false)}>
+                  Cancel
+                </button>
+                <button
+                  className="btn btn-primary btn-sm"
+                  style={{ flex: 1 }}
+                  onClick={() => handleEnrichAll(enrichLimit ? Number(enrichLimit) : undefined)}
+                  disabled={enrichLimit !== '' && (isNaN(Number(enrichLimit)) || Number(enrichLimit) < 1)}
+                >
+                  Start
+                </button>
+              </div>
+            </div>
+          )}
           <button className="btn btn-primary btn-sm" onClick={openNew}>
             + Add New
           </button>

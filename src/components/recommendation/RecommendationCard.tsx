@@ -78,13 +78,15 @@ function MediaRow({ item, index }: { item: MediaItemDTO; index: number }) {
                 : item.title}
             </p>
           </div>
-          <p style={{
-            fontSize: 12, color: 'var(--t2)', lineHeight: 1.55,
-            display: '-webkit-box',
-            WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-          }}>
-            {item.matchReason ?? item.description}
-          </p>
+          {item.description && !item.matchReason && (
+            <p style={{
+              fontSize: 12, color: 'var(--t2)', lineHeight: 1.55,
+              display: '-webkit-box',
+              WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+            }}>
+              {item.description}
+            </p>
+          )}
         </div>
 
         {/* Score badge */}
@@ -114,6 +116,27 @@ function MediaRow({ item, index }: { item: MediaItemDTO; index: number }) {
           }}
         />
       </div>
+
+      {/* Per-outlet reasoning */}
+      {item.matchReason && (
+        <div style={{
+          marginTop: 8,
+          padding: '8px 10px',
+          background: 'var(--bg-1)',
+          borderLeft: '2px solid var(--accent)',
+          borderRadius: '0 6px 6px 0',
+        }}>
+          <p style={{
+            fontSize: 9, fontWeight: 700, color: 'var(--accent)',
+            textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4,
+          }}>
+            Why this outlet
+          </p>
+          <p style={{ fontSize: 12, color: 'var(--t2)', lineHeight: 1.6, margin: 0 }}>
+            {item.matchReason}
+          </p>
+        </div>
+      )}
 
       {/* Key metrics: cost · traffic · DR */}
       {hasMetrics && (
@@ -171,7 +194,7 @@ function MediaRow({ item, index }: { item: MediaItemDTO; index: number }) {
             )}
           </div>
           {item.budgetFit && (
-            <p style={{ fontSize: 11, color: 'var(--t3)', fontStyle: 'italic' }}>
+            <p style={{ fontSize: 11, color: 'var(--green)', fontWeight: 500, fontStyle: 'italic' }}>
               {item.budgetFit}
             </p>
           )}
