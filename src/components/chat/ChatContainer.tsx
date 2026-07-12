@@ -43,10 +43,10 @@ export default function ChatContainer() {
 
 function EmptyState() {
   const prompts = [
-    'FMCG product, Gen Z audience, Kyiv region, $2,000 budget',
-    'B2B SaaS awareness campaign, nationwide, tech media',
-    'Fashion retail launch, 18-30 female, Instagram + TikTok formats',
-    'Local business seasonal promo, Lviv city, small budget',
+    'FMCG product launch, Gen Z audience, $2,000 budget, national reach',
+    'B2B SaaS awareness campaign, tech media, C-suite decision makers',
+    'Fashion retail launch, women 18-30, Article and Video formats',
+    'Local business seasonal promo, small budget, city-level targeting',
   ]
 
   return (
