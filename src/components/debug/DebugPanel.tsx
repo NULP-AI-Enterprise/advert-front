@@ -160,7 +160,9 @@ function getSummary(event: string, data: Record<string, unknown>): string | null
     case 'embed_error':
       return typeof d.error === 'string' ? d.error.slice(0, 80) : null
     case 'final_pool':
-      return `${d.total_candidates ?? '?'} candidates → enrichment (target ${d.target_results ?? '?'})`
+      return `pool=${d.total_candidates ?? '?'}  enriched=${d.enriched_count ?? '?'}  target=${d.target_results ?? '?'}`
+    case 'pre_rank':
+      return `analyzed=${d.pool_in ?? '?'}  kept=${d.batch_out ?? '?'}  dropped=${d.dropped ?? '?'}  score_cut=${d.score_cut ?? '?'}`
     case 'category_pad':
       return `new=${d.new_in_pool ?? '?'}  pool=${d.pool_size ?? '?'}`
     case 'top_traffic':
@@ -250,9 +252,212 @@ function EventRow({ evt, index }: { evt: DebugEvent; index: number }) {
 
       {open && hasData && (
         <div style={{ padding: '0 16px 10px 34px', background: 'var(--bg-1)' }}>
-          <DataTree data={evt.data} />
+          {evt.event === 'pre_rank'
+            ? <PreRankTable data={evt.data} />
+            : <DataTree data={evt.data} />
+          }
         </div>
       )}
+    </div>
+  )
+}
+
+// ── Pre-rank dedicated renderer ──────────────────────────────────────────────
+
+interface ScoredItem {
+  rank: number
+  kept: boolean
+  score: number
+  signals: string[]
+  title: string
+  category?: string
+  format?: string
+  traffic?: string
+  cost_usd?: number
+  dr?: number
+  enriched: boolean
+}
+
+function signalColor(sig: string): string {
+  if (sig.startsWith('+')) return '#10b981'
+  if (sig.startsWith('-')) return '#ef4444'
+  return '#6b7280'
+}
+
+function signalLabel(sig: string): string {
+  // "+30_category" → "cat+30", "+20_traffic>1M" → "1M+20", "0_unenriched" → "no desc"
+  const noPrefix = sig.replace(/^[+-]?\d+_/, '')
+  const num = sig.match(/^([+-]?\d+)_/)?.[1] ?? ''
+  const key = noPrefix.replace(/_/g, ' ')
+  return num ? `${key} ${num}` : key
+}
+
+function PreRankTable({ data }: { data: Record<string, unknown> }) {
+  const [filter, setFilter] = useState<'all' | 'kept' | 'dropped'>('all')
+  const [showSignals, setShowSignals] = useState(false)
+
+  const allScored = (data.all_scored as ScoredItem[] | undefined) ?? []
+  const poolIn    = (data.pool_in    as number) ?? 0
+  const batchOut  = (data.batch_out  as number) ?? 0
+  const dropped   = (data.dropped    as number) ?? 0
+  const scoreMax  = data.score_max  as number | undefined
+  const scoreCut  = data.score_cut  as number | undefined
+  const scoreMin  = data.score_min  as number | undefined
+  const keptCat   = data.kept_by_category    as Record<string, number> | undefined
+  const droppedCat = data.dropped_by_category as Record<string, number> | undefined
+
+  const visible = filter === 'all'     ? allScored
+                : filter === 'kept'    ? allScored.filter(i => i.kept)
+                :                        allScored.filter(i => !i.kept)
+
+  return (
+    <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)' }}>
+
+      {/* Stats bar */}
+      <div style={{ display: 'flex', gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
+        <span style={{ color: 'var(--t3)' }}>analyzed <span style={{ color: 'var(--t1)', fontWeight: 600 }}>{poolIn}</span></span>
+        <span style={{ color: '#10b981' }}>kept <span style={{ fontWeight: 600 }}>{batchOut}</span></span>
+        <span style={{ color: '#ef4444' }}>dropped <span style={{ fontWeight: 600 }}>{dropped}</span></span>
+        {scoreMax !== undefined && (
+          <span style={{ color: 'var(--t3)' }}>
+            scores <span style={{ color: 'var(--t2)' }}>{scoreMax}</span>
+            <span style={{ color: 'var(--t4)' }}> → cut </span>
+            <span style={{ color: 'var(--t2)' }}>{scoreCut}</span>
+            <span style={{ color: 'var(--t4)' }}> → </span>
+            <span style={{ color: 'var(--t2)' }}>{scoreMin}</span>
+          </span>
+        )}
+      </div>
+
+      {/* Category distribution */}
+      {keptCat && Object.keys(keptCat).length > 0 && (
+        <div style={{ marginBottom: 8 }}>
+          <span style={{ color: 'var(--t4)', fontSize: 10 }}>kept by category: </span>
+          {Object.entries(keptCat).sort((a, b) => b[1] - a[1]).map(([cat, n]) => (
+            <span key={cat} style={{
+              display: 'inline-block', marginRight: 6,
+              fontSize: 10, color: '#10b981',
+            }}>{cat} ({n})</span>
+          ))}
+        </div>
+      )}
+      {droppedCat && Object.keys(droppedCat).length > 0 && (
+        <div style={{ marginBottom: 8 }}>
+          <span style={{ color: 'var(--t4)', fontSize: 10 }}>dropped by category: </span>
+          {Object.entries(droppedCat).sort((a, b) => b[1] - a[1]).map(([cat, n]) => (
+            <span key={cat} style={{
+              display: 'inline-block', marginRight: 6,
+              fontSize: 10, color: '#ef4444',
+            }}>{cat} ({n})</span>
+          ))}
+        </div>
+      )}
+
+      {/* Filter tabs */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+        {(['all', 'kept', 'dropped'] as const).map(f => (
+          <button key={f} onClick={() => setFilter(f)} style={{
+            fontSize: 10, padding: '2px 8px', borderRadius: 4, border: 'none',
+            cursor: 'pointer',
+            background: filter === f ? 'var(--accent)' : 'var(--bg-2)',
+            color:      filter === f ? 'white' : 'var(--t3)',
+            fontFamily: 'var(--font-mono)',
+          }}>
+            {f === 'all' ? `all (${poolIn})` : f === 'kept' ? `kept (${batchOut})` : `dropped (${dropped})`}
+          </button>
+        ))}
+        <button onClick={() => setShowSignals(v => !v)} style={{
+          fontSize: 10, padding: '2px 8px', borderRadius: 4, border: '1px solid var(--bd)',
+          cursor: 'pointer', background: 'none',
+          color: showSignals ? 'var(--accent)' : 'var(--t3)',
+          marginLeft: 'auto',
+        }}>
+          {showSignals ? 'hide signals' : 'show signals'}
+        </button>
+      </div>
+
+      {/* Ranked list */}
+      <div style={{ maxHeight: 420, overflowY: 'auto', border: '1px solid var(--bd)', borderRadius: 4 }}>
+        {visible.map((item) => (
+          <div key={item.rank} style={{
+            display: 'flex', flexDirection: 'column', gap: 2,
+            padding: '5px 8px',
+            borderBottom: '1px solid var(--bd)',
+            background: item.kept ? 'rgba(16,185,129,0.03)' : 'rgba(239,68,68,0.03)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+              {/* Rank + score badge */}
+              <span style={{ color: 'var(--t4)', width: 24, flexShrink: 0, textAlign: 'right' }}>
+                #{item.rank}
+              </span>
+              <span style={{
+                fontWeight: 700, fontSize: 11, width: 28, textAlign: 'center',
+                color: item.kept ? '#10b981' : '#ef4444', flexShrink: 0,
+              }}>
+                {item.score}
+              </span>
+              {/* Kept / dropped indicator */}
+              <span style={{
+                fontSize: 9, fontWeight: 700, letterSpacing: '0.05em',
+                color: item.kept ? '#10b981' : '#ef4444', flexShrink: 0, width: 48,
+              }}>
+                {item.kept ? '✓ KEPT' : '✗ DROP'}
+              </span>
+              {/* Title */}
+              <span style={{
+                flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                color: 'var(--t1)',
+              }}>
+                {item.title}
+              </span>
+            </div>
+
+            {/* Meta row */}
+            <div style={{ display: 'flex', gap: 8, paddingLeft: 58, flexWrap: 'wrap' }}>
+              {item.category && (
+                <span style={{ fontSize: 9, color: '#6366f1', background: 'rgba(99,102,241,0.1)', borderRadius: 3, padding: '0 4px' }}>
+                  {item.category}
+                </span>
+              )}
+              {item.format && (
+                <span style={{ fontSize: 9, color: 'var(--t3)' }}>{item.format}</span>
+              )}
+              {item.traffic && (
+                <span style={{ fontSize: 9, color: 'var(--t2)' }}>↑{item.traffic}</span>
+              )}
+              {item.dr !== undefined && (
+                <span style={{ fontSize: 9, color: 'var(--t3)' }}>DR={item.dr}</span>
+              )}
+              {item.cost_usd !== undefined && (
+                <span style={{ fontSize: 9, color: 'var(--t3)' }}>${item.cost_usd}</span>
+              )}
+              {item.enriched
+                ? <span style={{ fontSize: 9, color: '#10b981' }}>enriched</span>
+                : <span style={{ fontSize: 9, color: 'var(--t4)' }}>unenriched</span>
+              }
+            </div>
+
+            {/* Signals */}
+            {showSignals && item.signals.length > 0 && (
+              <div style={{ display: 'flex', gap: 4, paddingLeft: 58, flexWrap: 'wrap' }}>
+                {item.signals.map((sig, i) => (
+                  <span key={i} style={{
+                    fontSize: 9, color: signalColor(sig),
+                    fontFamily: 'var(--font-mono)',
+                  }}>
+                    {signalLabel(sig)}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+        {visible.length === 0 && (
+          <div style={{ padding: '16px', color: 'var(--t4)', textAlign: 'center' }}>
+            no items
+          </div>
+        )}
+      </div>
     </div>
   )
 }
