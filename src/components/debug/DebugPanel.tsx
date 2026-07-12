@@ -134,50 +134,101 @@ export default function DebugPanel() {
   )
 }
 
+/** Extract a compact one-line summary from event data so key numbers are visible without expanding. */
+function getSummary(event: string, data: Record<string, unknown>): string | null {
+  const d = data as Record<string, number | string | unknown[]>
+  switch (event) {
+    case 'embed_query':
+      return typeof d.query_text === 'string'
+        ? `"${d.query_text.slice(0, 60)}${d.query_text.length > 60 ? '…' : ''}"`
+        : null
+    case 'keywords_built': {
+      const list = Array.isArray(d.final_keyword_list) ? d.final_keyword_list as string[] : []
+      return list.length ? list.slice(0, 6).join(' · ') + (list.length > 6 ? ` +${list.length - 6}` : '') : null
+    }
+    case 'vector_search':
+    case 'vector_retry':
+      return `sql=${d.sql_returned ?? '?'}  new=${d.new_in_pool ?? '?'}  pool=${d.pool_size ?? '?'}`
+    case 'llm_input':
+      return `history=${d.history_msgs ?? '?'} msgs  clarify_count=${d.clarify_count ?? '?'}`
+    case 'llm_output':
+      return typeof d.action === 'string' ? `action=${d.action}` : null
+    case 'enrichment_llm_input':
+    case 'input':
+      return typeof d.candidate_count === 'number' ? `${d.candidate_count} candidates` : null
+    case 'llm_error':
+    case 'embed_error':
+      return typeof d.error === 'string' ? d.error.slice(0, 80) : null
+    case 'final_pool':
+      return `${d.total_candidates ?? '?'} candidates → enrichment (target ${d.target_results ?? '?'})`
+    case 'category_pad':
+      return `new=${d.new_in_pool ?? '?'}  pool=${d.pool_size ?? '?'}`
+    case 'top_traffic':
+      return `new=${d.new_in_pool ?? '?'}  pool=${d.pool_size ?? '?'}`
+    default:
+      if (typeof d.pool_size === 'number') {
+        return `new=${d.new_in_pool ?? '?'}  pool=${d.pool_size}`
+      }
+      if (typeof d.keywords_tried === 'number') {
+        return `${d.keywords_tried} keywords  new=${d.new_in_pool ?? '?'}  pool=${d.pool_size ?? '?'}`
+      }
+      return null
+  }
+}
+
 function EventRow({ evt, index }: { evt: DebugEvent; index: number }) {
   const [open, setOpen] = useState(false)
   const colors = STAGE_COLORS[evt.stage]
   const hasData = Object.keys(evt.data).length > 0
+  const summary = getSummary(evt.event, evt.data)
+  const isError = evt.event.includes('error')
 
   return (
-    <div style={{
-      borderBottom: '1px solid var(--bd)',
-      transition: 'background 0.1s',
-    }}>
+    <div style={{ borderBottom: '1px solid var(--bd)' }}>
       <button
         onClick={() => hasData && setOpen(v => !v)}
         style={{
           width: '100%', display: 'flex', alignItems: 'flex-start', gap: 10,
-          padding: '8px 16px', background: 'none', border: 'none', cursor: hasData ? 'pointer' : 'default',
-          textAlign: 'left',
+          padding: '8px 16px', background: 'none', border: 'none',
+          cursor: hasData ? 'pointer' : 'default', textAlign: 'left',
         }}
         onMouseEnter={e => hasData && (e.currentTarget.style.background = 'var(--bg-1)')}
         onMouseLeave={e => (e.currentTarget.style.background = 'none')}
       >
-        {/* Timeline dot */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0, marginTop: 3 }}>
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: colors.dot }} />
-          {index < 999 && (
-            <div style={{ width: 1, height: 16, background: 'var(--bd)', marginTop: 2 }} />
-          )}
+        {/* Timeline */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0, marginTop: 4 }}>
+          <div style={{
+            width: 8, height: 8, borderRadius: '50%',
+            background: isError ? 'var(--red)' : colors.dot,
+          }} />
+          <div style={{ width: 1, flex: 1, minHeight: 12, background: 'var(--bd)', marginTop: 2 }} />
         </div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
-          {/* Stage badge + label */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2, flexWrap: 'wrap' }}>
             <span style={{
-              fontSize: 9, fontWeight: 700, letterSpacing: '0.06em',
-              textTransform: 'uppercase',
-              background: colors.badge, color: colors.text,
-              borderRadius: 4, padding: '1px 5px',
+              fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
+              background: isError ? 'rgba(239,68,68,0.1)' : colors.badge,
+              color: isError ? 'var(--red)' : colors.text,
+              borderRadius: 4, padding: '1px 5px', flexShrink: 0,
             }}>
               {STAGE_LABELS[evt.stage]}
             </span>
-            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--t1)', flex: 1 }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--t1)' }}>
               {evt.label}
             </span>
           </div>
-          {/* Timestamp + event key */}
+
+          {/* Summary line — key metrics without expanding */}
+          {summary && (
+            <div style={{
+              fontSize: 10, color: 'var(--t2)', fontFamily: 'var(--font-mono)',
+              marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+            }}>
+              {summary}
+            </div>
+          )}
+
           <div style={{ display: 'flex', gap: 8 }}>
             <span style={{ fontSize: 10, color: 'var(--t4)', fontFamily: 'var(--font-mono)' }}>
               {evt.ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
@@ -190,21 +241,15 @@ function EventRow({ evt, index }: { evt: DebugEvent; index: number }) {
 
         {hasData && (
           <span style={{
-            fontSize: 10, color: 'var(--t3)', flexShrink: 0, marginTop: 2,
+            fontSize: 10, color: 'var(--t3)', flexShrink: 0, marginTop: 4,
             transform: open ? 'rotate(90deg)' : 'none',
-            transition: 'transform 0.15s',
-            display: 'inline-block',
-          }}>
-            ▶
-          </span>
+            transition: 'transform 0.15s', display: 'inline-block',
+          }}>▶</span>
         )}
       </button>
 
       {open && hasData && (
-        <div style={{
-          padding: '0 16px 10px 34px',
-          background: 'var(--bg-1)',
-        }}>
+        <div style={{ padding: '0 16px 10px 34px', background: 'var(--bg-1)' }}>
           <DataTree data={evt.data} />
         </div>
       )}
