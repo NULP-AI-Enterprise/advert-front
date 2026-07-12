@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useChatStore } from '@/store/chatStore'
 import { useAuthStore } from '@/store/authStore'
 import { useSessions, SessionSummary } from '@/hooks/useSessions'
@@ -8,6 +8,7 @@ import { useSessions, SessionSummary } from '@/hooks/useSessions'
 export default function Sidebar({ onNewChat }: { onNewChat: () => void }) {
   const isConnected  = useChatStore(s => s.isConnected)
   const sessionId    = useChatStore(s => s.sessionId)
+  const isTyping     = useChatStore(s => s.isTyping)
   const setSessionId = useChatStore(s => s.setSessionId)
   const loadMessages = useChatStore(s => s.loadMessages)
 
@@ -15,7 +16,22 @@ export default function Sidebar({ onNewChat }: { onNewChat: () => void }) {
   const user   = useAuthStore(s => s.user)
   const logout = useAuthStore(s => s.logout)
 
-  const { sessions, deleteSession } = useSessions()
+  const { sessions, reload, deleteSession } = useSessions()
+
+  // Reload session list once after the first response arrives for a new session
+  const pendingReloadRef = useRef(false)
+  useEffect(() => {
+    if (sessionId && !sessions.some(s => s.id === sessionId)) {
+      pendingReloadRef.current = true
+    }
+  }, [sessionId, sessions])
+
+  useEffect(() => {
+    if (pendingReloadRef.current && !isTyping) {
+      pendingReloadRef.current = false
+      reload()
+    }
+  }, [isTyping, reload])
 
   const openSession = useCallback(async (s: SessionSummary) => {
     setSessionId(s.id)

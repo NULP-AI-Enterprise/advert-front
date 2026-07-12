@@ -149,5 +149,5 @@ export function useWebSocket() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  return { sendChatMessage }
+  return { sendChatMessage, send }
 }

@@ -23,7 +23,10 @@ export function useSessions() {
       const headers: Record<string, string> = {}
       if (token) headers['Authorization'] = `Bearer ${token}`
       const res = await fetch('/api/chat/sessions', { headers })
-      if (res.ok) setSessions(await res.json())
+      if (res.ok) {
+        const all: SessionSummary[] = await res.json()
+        setSessions(all.filter(s => s.messageCount > 0))
+      }
     } catch {
       // silent — session list is non-critical
     } finally {
