@@ -22,7 +22,7 @@ export function useWebSocket() {
   const {
     sessionId, setConnected, setTyping,
     addMessage, appendStreamChunk, finalizeStream,
-    setRecommendations, setMarketingPlan,
+    setRecommendations, setMarketingPlan, addDebugEvent,
   } = useChatStore()
 
   const handleMessage = useCallback((raw: string) => {
@@ -92,6 +92,20 @@ export function useWebSocket() {
           createdAt: new Date(),
         })
         break
+
+      case 'DEBUG_EVENT': {
+        const p = msg.payload as { stage: string; event: string; label: string; data: Record<string, unknown> }
+        if (p) {
+          addDebugEvent({
+            stage: p.stage as import('@/types/chat').DebugStage,
+            event: p.event,
+            label: p.label,
+            ts: new Date(),
+            data: p.data ?? {},
+          })
+        }
+        break
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

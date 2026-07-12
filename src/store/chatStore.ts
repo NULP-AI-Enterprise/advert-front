@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { ChatMessage, DeviceContext } from '@/types/chat'
+import { ChatMessage, DebugEvent, DeviceContext } from '@/types/chat'
 import { RecommendationResponse } from '@/types/recommendation'
 
 export interface MarketingPlan {
@@ -17,6 +17,8 @@ interface ChatStore {
   recommendations: RecommendationResponse | null
   marketingPlan: MarketingPlan | null
   deviceContext: DeviceContext | null
+  debugEvents: DebugEvent[]
+  debugOpen: boolean
 
   setSessionId: (id: string) => void
   setConnected: (v: boolean) => void
@@ -28,6 +30,9 @@ interface ChatStore {
   setMarketingPlan: (plan: MarketingPlan) => void
   setDeviceContext: (ctx: DeviceContext) => void
   loadMessages: (msgs: ChatMessage[]) => void
+  addDebugEvent: (evt: DebugEvent) => void
+  clearDebugEvents: () => void
+  setDebugOpen: (open: boolean) => void
   reset: () => void
   newChat: () => void
 }
@@ -40,6 +45,8 @@ export const useChatStore = create<ChatStore>((set) => ({
   recommendations: null,
   marketingPlan: null,
   deviceContext: null,
+  debugEvents: [],
+  debugOpen: false,
 
   setSessionId: (id) => set({ sessionId: id }),
   setConnected: (v) => set({ isConnected: v }),
@@ -72,6 +79,10 @@ export const useChatStore = create<ChatStore>((set) => ({
 
   loadMessages: (msgs) => set({ messages: msgs, recommendations: null, marketingPlan: null, isTyping: false }),
 
+  addDebugEvent: (evt) => set((s) => ({ debugEvents: [...s.debugEvents, evt] })),
+  clearDebugEvents: () => set({ debugEvents: [] }),
+  setDebugOpen: (open) => set({ debugOpen: open }),
+
   reset: () => set({
     sessionId: null,
     messages: [],
@@ -87,6 +98,7 @@ export const useChatStore = create<ChatStore>((set) => ({
     isTyping: false,
     recommendations: null,
     marketingPlan: null,
+    debugEvents: [],
     isConnected: s.isConnected,
   })),
 }))

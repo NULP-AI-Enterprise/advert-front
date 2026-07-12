@@ -7,6 +7,7 @@ import { useAuthStore } from '@/store/authStore'
 import ChatContainer from '@/components/chat/ChatContainer'
 import Sidebar from '@/components/layout/Sidebar'
 import RightPanel from '@/components/layout/RightPanel'
+import DebugPanel, { DebugToggleButton } from '@/components/debug/DebugPanel'
 
 export default function HomePage() {
   const newChat = useChatStore(s => s.newChat)
@@ -24,6 +25,8 @@ export default function HomePage() {
       <Sidebar onNewChat={newChat} />
       <ChatContainer />
       <RightPanel />
+      <DebugPanel />
+      <DebugToggleButton />
     </div>
   )
 }

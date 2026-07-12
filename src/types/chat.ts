@@ -12,6 +12,17 @@ export type MessageType =
   | 'ERROR'
   | 'PING'
   | 'PONG'
+  | 'DEBUG_EVENT'
+
+export type DebugStage = 'router' | 'search' | 'enrichment' | 'system'
+
+export interface DebugEvent {
+  stage: DebugStage
+  event: string
+  label: string
+  ts: Date
+  data: Record<string, unknown>
+}
 
 export interface DeviceContext {
   lat?: number
