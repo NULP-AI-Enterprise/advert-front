@@ -13,6 +13,7 @@ export type MessageType =
   | 'PING'
   | 'PONG'
   | 'DEBUG_EVENT'
+  | 'SESSION_TITLE'
 
 export type DebugStage = 'router' | 'search' | 'enrichment' | 'system'
 

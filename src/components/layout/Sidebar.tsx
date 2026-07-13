@@ -5,10 +5,38 @@ import { useChatStore } from '@/store/chatStore'
 import { useAuthStore } from '@/store/authStore'
 import { useSessions, SessionSummary } from '@/hooks/useSessions'
 
+// ── Date grouping ────────────────────────────────────────────────────────────
+
+function groupSessions(sessions: SessionSummary[]) {
+  const now = new Date()
+  const todayStart    = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const yesterdayStart = new Date(todayStart); yesterdayStart.setDate(todayStart.getDate() - 1)
+  const weekStart      = new Date(todayStart); weekStart.setDate(todayStart.getDate() - 7)
+  const monthStart     = new Date(todayStart); monthStart.setDate(todayStart.getDate() - 30)
+
+  const groups: { label: string; items: SessionSummary[] }[] = []
+
+  const bucket = (label: string, items: SessionSummary[]) => {
+    if (items.length) groups.push({ label, items })
+  }
+
+  bucket('Today',             sessions.filter(s => new Date(s.updatedAt) >= todayStart))
+  bucket('Yesterday',         sessions.filter(s => { const d = new Date(s.updatedAt); return d >= yesterdayStart && d < todayStart }))
+  bucket('Previous 7 days',   sessions.filter(s => { const d = new Date(s.updatedAt); return d >= weekStart && d < yesterdayStart }))
+  bucket('Previous 30 days',  sessions.filter(s => { const d = new Date(s.updatedAt); return d >= monthStart && d < weekStart }))
+  bucket('Older',             sessions.filter(s => new Date(s.updatedAt) < monthStart))
+
+  return groups
+}
+
+// ── Sidebar ──────────────────────────────────────────────────────────────────
+
 export default function Sidebar({ onNewChat }: { onNewChat: () => void }) {
   const isConnected  = useChatStore(s => s.isConnected)
   const sessionId    = useChatStore(s => s.sessionId)
   const isTyping     = useChatStore(s => s.isTyping)
+  const titleUpdate  = useChatStore(s => s.titleUpdate)
+  const clearTitleUpdate = useChatStore(s => s.clearTitleUpdate)
   const setSessionId = useChatStore(s => s.setSessionId)
   const loadMessages = useChatStore(s => s.loadMessages)
 
@@ -16,9 +44,17 @@ export default function Sidebar({ onNewChat }: { onNewChat: () => void }) {
   const user   = useAuthStore(s => s.user)
   const logout = useAuthStore(s => s.logout)
 
-  const { sessions, reload, deleteSession } = useSessions()
+  const { sessions, reload, deleteSession, renameSession, patchTitle } = useSessions()
 
-  // Reload session list once after the first response arrives for a new session
+  // Apply WebSocket title update to local session list
+  useEffect(() => {
+    if (titleUpdate) {
+      patchTitle(titleUpdate.id, titleUpdate.title)
+      clearTitleUpdate()
+    }
+  }, [titleUpdate, patchTitle, clearTitleUpdate])
+
+  // Reload list once after the first response arrives for a new session
   const pendingReloadRef = useRef(false)
   useEffect(() => {
     if (sessionId && !sessions.some(s => s.id === sessionId)) {
@@ -50,6 +86,8 @@ export default function Sidebar({ onNewChat }: { onNewChat: () => void }) {
     } catch { /* silent */ }
   }, [setSessionId, loadMessages])
 
+  const groups = groupSessions(sessions)
+
   return (
     <aside className="sidebar">
       {/* Logo */}
@@ -73,22 +111,23 @@ export default function Sidebar({ onNewChat }: { onNewChat: () => void }) {
           New chat
         </button>
 
-        {sessions.length > 0 && (
-          <>
-            <p className="section-label" style={{ marginTop: 16 }}>Recent</p>
+        {groups.map(group => (
+          <div key={group.label}>
+            <p className="section-label" style={{ marginTop: 16 }}>{group.label}</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              {sessions.map(s => (
+              {group.items.map(s => (
                 <SessionRow
                   key={s.id}
                   session={s}
                   active={s.id === sessionId}
                   onOpen={() => openSession(s)}
                   onDelete={() => deleteSession(s.id)}
+                  onRename={(title) => renameSession(s.id, title)}
                 />
               ))}
             </div>
-          </>
-        )}
+          </div>
+        ))}
       </div>
 
       {/* Footer */}
@@ -130,33 +169,90 @@ export default function Sidebar({ onNewChat }: { onNewChat: () => void }) {
   )
 }
 
+// ── SessionRow with inline rename ────────────────────────────────────────────
+
 function SessionRow({
-  session, active, onOpen, onDelete,
+  session, active, onOpen, onDelete, onRename,
 }: {
   session: SessionSummary
   active: boolean
   onOpen: () => void
   onDelete: () => void
+  onRename: (title: string) => void
 }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft]     = useState(session.title || '')
+  const inputRef              = useRef<HTMLInputElement>(null)
+
+  // Sync draft when session title updates from outside (e.g. WebSocket auto-title)
+  useEffect(() => {
+    if (!editing) setDraft(session.title || '')
+  }, [session.title, editing])
+
+  const startEdit = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setDraft(session.title || '')
+    setEditing(true)
+    setTimeout(() => inputRef.current?.select(), 0)
+  }
+
+  const commitEdit = () => {
+    const trimmed = draft.trim()
+    if (trimmed && trimmed !== session.title) onRename(trimmed)
+    else setDraft(session.title || '')
+    setEditing(false)
+  }
+
+  if (editing) {
+    return (
+      <div className={`session-row ${active ? 'active' : ''}`} style={{ padding: '4px 6px' }}>
+        <input
+          ref={inputRef}
+          className="session-rename-input"
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onBlur={commitEdit}
+          onKeyDown={e => {
+            if (e.key === 'Enter')  { e.preventDefault(); commitEdit() }
+            if (e.key === 'Escape') { setDraft(session.title || ''); setEditing(false) }
+          }}
+          autoFocus
+          maxLength={80}
+        />
+      </div>
+    )
+  }
+
   return (
     <div
       className={`session-row ${active ? 'active' : ''}`}
       onClick={onOpen}
+      title={session.title || 'New conversation'}
     >
-      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0, color: active ? 'var(--accent)' : 'var(--t4)' }}>
-        <path d="M2 2h8a1 1 0 011 1v5a1 1 0 01-1 1H7L5 11V9H2a1 1 0 01-1-1V3a1 1 0 011-1z"
-              stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
-      </svg>
       <span className="session-row-title">
         {session.title || 'New conversation'}
       </span>
-      <button
-        className="session-delete"
-        onClick={e => { e.stopPropagation(); onDelete() }}
-        title="Delete"
-      >
-        ×
-      </button>
+      <div className="session-row-actions">
+        <button
+          className="session-action-btn"
+          onClick={startEdit}
+          title="Rename"
+        >
+          <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+            <path d="M7.5 1.5l2 2-6 6H1.5v-2l6-6z" stroke="currentColor" strokeWidth="1.1"
+                  strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+        <button
+          className="session-action-btn session-delete"
+          onClick={e => { e.stopPropagation(); onDelete() }}
+          title="Delete"
+        >
+          <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+            <path d="M2 2l7 7M9 2L2 9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+          </svg>
+        </button>
+      </div>
     </div>
   )
 }

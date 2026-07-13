@@ -19,6 +19,7 @@ interface ChatStore {
   deviceContext: DeviceContext | null
   debugEvents: DebugEvent[]
   debugOpen: boolean
+  titleUpdate: { id: string; title: string } | null
 
   setSessionId: (id: string) => void
   setConnected: (v: boolean) => void
@@ -33,6 +34,8 @@ interface ChatStore {
   addDebugEvent: (evt: DebugEvent) => void
   clearDebugEvents: () => void
   setDebugOpen: (open: boolean) => void
+  setTitleUpdate: (u: { id: string; title: string }) => void
+  clearTitleUpdate: () => void
   reset: () => void
   newChat: () => void
 }
@@ -47,6 +50,7 @@ export const useChatStore = create<ChatStore>((set) => ({
   deviceContext: null,
   debugEvents: [],
   debugOpen: false,
+  titleUpdate: null,
 
   setSessionId: (id) => set({ sessionId: id }),
   setConnected: (v) => set({ isConnected: v }),
@@ -82,6 +86,8 @@ export const useChatStore = create<ChatStore>((set) => ({
   addDebugEvent: (evt) => set((s) => ({ debugEvents: [...s.debugEvents, evt] })),
   clearDebugEvents: () => set({ debugEvents: [] }),
   setDebugOpen: (open) => set({ debugOpen: open }),
+  setTitleUpdate: (u) => set({ titleUpdate: u }),
+  clearTitleUpdate: () => set({ titleUpdate: null }),
 
   reset: () => set({
     sessionId: null,

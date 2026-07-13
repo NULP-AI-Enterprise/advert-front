@@ -22,7 +22,7 @@ export function useWebSocket() {
   const {
     sessionId, setConnected, setTyping,
     addMessage, appendStreamChunk, finalizeStream,
-    setRecommendations, setMarketingPlan, addDebugEvent,
+    setRecommendations, setMarketingPlan, addDebugEvent, setTitleUpdate,
   } = useChatStore()
 
   const handleMessage = useCallback((raw: string) => {
@@ -91,6 +91,12 @@ export function useWebSocket() {
           type: 'error',
           createdAt: new Date(),
         })
+        break
+
+      case 'SESSION_TITLE':
+        if (msg.sessionId && msg.content) {
+          setTitleUpdate({ id: msg.sessionId, title: msg.content })
+        }
         break
 
       case 'DEBUG_EVENT': {

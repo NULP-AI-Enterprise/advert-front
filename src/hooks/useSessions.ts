@@ -50,5 +50,10 @@ export function useSessions() {
     setSessions(prev => prev.map(s => s.id === id ? { ...s, title } : s))
   }, [])
 
-  return { sessions, loading, reload: load, deleteSession, renameSession }
+  // Local-only update — no network call, used when title arrives via WebSocket
+  const patchTitle = useCallback((id: string, title: string) => {
+    setSessions(prev => prev.map(s => s.id === id ? { ...s, title } : s))
+  }, [])
+
+  return { sessions, loading, reload: load, deleteSession, renameSession, patchTitle }
 }
